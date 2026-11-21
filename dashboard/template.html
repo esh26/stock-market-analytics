@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stock Market Analytics Dashboard</title>
+<style>
+:root{--bg:#070b1f;--card:rgba(20,28,68,.62);--text:#eaf0ff;--muted:#a3b1d8;--line:rgba(160,180,255,.2);--accent:#4d8dff;--warn:#ff6b4a;--good:#52d6a0;--gold:#e9c46a;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}html,body{margin:0}
+body{background-color:var(--bg);background-image:radial-gradient(ellipse at 15% 0%,rgba(110,60,200,.35),transparent 55%),radial-gradient(ellipse at 90% 25%,rgba(20,110,200,.30),transparent 50%),radial-gradient(ellipse at 50% 100%,rgba(200,70,120,.18),transparent 55%),radial-gradient(1px 1px at 25px 35px,#fff,transparent),radial-gradient(1.5px 1.5px at 130px 90px,#cfe3ff,transparent),radial-gradient(1px 1px at 70px 160px,#ffe9c4,transparent),radial-gradient(2px 2px at 180px 20px,#fff,transparent);background-size:auto,auto,auto,200px 200px,260px 260px,320px 320px,410px 410px;background-attachment:fixed;color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(1.5px 1.5px at 60px 70px,#fff,transparent),radial-gradient(1px 1px at 150px 140px,#bcd4ff,transparent),radial-gradient(2px 2px at 220px 40px,#fff6d8,transparent);background-size:240px 240px,300px 300px,370px 370px;animation:tw 4s ease-in-out infinite alternate}
+@keyframes tw{from{opacity:.25}to{opacity:1}}@media(prefers-reduced-motion:reduce){body::before{animation:none}}
+.wrap{position:relative;max-width:1250px;margin:0 auto;padding:20px 16px 40px}
+h1{margin:0;font-size:24px;background:linear-gradient(90deg,#5ce1e6,#4d8dff,#b794f6,#ff9eb5,#e9c46a);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{margin:0 0 10px;font-size:15px}.sub{color:var(--muted);margin:2px 0 14px}
+.badge{-webkit-text-fill-color:var(--muted);display:inline-block;font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:99px;margin-left:8px;vertical-align:middle}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:12px}
+.bar label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);gap:3px}
+select,button{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+button:hover,.on{border-color:var(--accent)}.on{background:rgba(77,141,255,.25)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.chip{padding:3px 10px;border-radius:99px;font-size:12px;border:1px solid var(--line);cursor:pointer;color:var(--muted)}
+.grid{display:grid;gap:12px}.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:12px}
+.two{grid-template-columns:repeat(auto-fit,minmax(360px,1fr));margin-bottom:12px}
+.card{background:var(--card);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 24px rgba(0,0,0,.35);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi .v{font-size:24px;font-weight:700}.kpi .l{color:var(--muted);font-size:12px}
+.ch{position:relative;height:270px}.sm{height:190px}
+table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}th{color:var(--muted);font-size:12px}
+.tbl{overflow-x:auto}.up{color:var(--good)}.dn{color:var(--warn)}
+.hm td,.hm th{text-align:center;padding:5px 4px;font-size:11px;border:1px solid rgba(0,0,0,.25)}
+ul{margin:0;padding-left:18px}li{margin:3px 0}footer{color:var(--muted);font-size:12px;margin-top:18px}
+#err{display:none;padding:10px;border:1px solid var(--warn);border-radius:8px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Stock Market Analytics <span class="badge" id="badge"></span></h1>
+<p class="sub">Price trends, technical indicators, risk and correlation for 11 simulated stocks across 5 sectors.</p>
+<div id="err">Charts could not load (Chart.js blocked or offline). KPIs and tables still work.</div>
+<div class="bar">
+<label>Stock<select id="tk"></select></label>
+<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">Range</div><span id="rng"></span></div>
+<label style="flex-direction:row;align-items:center;gap:6px;margin-bottom:6px"><input type="checkbox" id="s20" checked>SMA 20</label>
+<label style="flex-direction:row;align-items:center;gap:6px;margin-bottom:6px"><input type="checkbox" id="s50" checked>SMA 50</label>
+<button id="csv">Export view (CSV)</button>
+</div>
+<div class="grid kpis" id="kpis"></div>
+<div class="grid two">
+<div class="card"><h2>Price, moving averages and volume</h2><div class="ch"><canvas id="price"></canvas></div></div>
+<div class="card"><h2>Insights for this view</h2><ul id="ins"></ul>
+<h2 style="margin-top:14px">RSI (14)</h2><div class="ch sm"><canvas id="rsi"></canvas></div></div>
+</div>
+<div class="grid two">
+<div class="card"><h2>Drawdown from peak (%)</h2><div class="ch"><canvas id="dd"></canvas></div></div>
+<div class="card"><h2>Compare stocks: growth of 100 invested</h2><div class="chips" id="chips"></div><div class="ch" style="height:225px"><canvas id="cmp"></canvas></div></div>
+</div>
+<div class="grid two">
+<div class="card"><h2>Risk vs return (annualised, selected range)</h2><div class="ch"><canvas id="rr"></canvas></div></div>
+<div class="card tbl"><h2>Correlation of daily returns (selected range)</h2><table class="hm" id="hm"></table></div>
+</div>
+<div class="card tbl"><h2>Risk and return summary (selected range) with full-period statistics</h2><table id="sum"></table>
+<p class="sub" style="margin:8px 0 0">Beta is measured against an equal-weight index of all 11 stocks. p-value tests whether the mean daily return differs from zero (full period). Strategy = long when SMA20 is above SMA50, otherwise cash (full period, no costs).</p></div>
+<footer>Prices are simulated (seeded generator in src/generate_data.py); results describe the simulation, not real markets, and are not investment advice.</footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const D=/*__DATA__*/null;
+const PAL=["#4d8dff","#ff6b4a","#e9c46a","#5ce1e6","#ff9eb5","#52d6a0","#b794f6","#f4a259","#7fb069","#d4a5ff","#8ecae6"];
+const $=s=>document.querySelector(s),T=D.dates.length,CH={},ANN=252,RF=.02;
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const RANGES=[["3M",63],["6M",126],["1Y",252],["3Y",756],["All",T]];let rangeN=252,picked=["NVTX","ARGB","SOLX","HLXA"];
+const col=k=>PAL[D.tickers.indexOf(k)%PAL.length];
+$("#badge").textContent="Simulated data · "+D.dates[0]+" to "+D.dates[T-1];
+$("#tk").innerHTML=D.tickers.map(k=>`<option>${k}</option>`).join("");$("#tk").onchange=update;
+$("#s20").onchange=$("#s50").onchange=update;
+$("#rng").innerHTML=RANGES.map(([l,n])=>`<button data-n="${n}" class="${n===252?"on":""}">${l}</button>`).join(" ");
+$("#rng").onclick=e=>{if(!e.target.dataset.n)return;rangeN=+e.target.dataset.n;[...$("#rng").children].forEach(b=>b.classList.toggle("on",b===e.target));update();};
+$("#chips").innerHTML=D.tickers.map(k=>`<span class="chip" data-k="${k}">${k}</span>`).join("");
+$("#chips").onclick=e=>{const k=e.target.dataset.k;if(!k)return;picked=picked.includes(k)?picked.filter(x=>x!==k):[...picked,k];update();};
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,sd=a=>{const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1));};
+const rets=c=>c.slice(1).map((x,i)=>x/c[i]-1);
+const sma=(c,n)=>c.map((_,i)=>i<n-1?null:mean(c.slice(i-n+1,i+1)));
+function rsi(c){let u=0,d=0;return c.map((x,i)=>{if(!i)return null;const ch=x-c[i-1],a=1/14;u=a*Math.max(ch,0)+(1-a)*u;d=a*Math.max(-ch,0)+(1-a)*d;return i<14?null:100-100/(1+u/(d||1e-9));});}
+function dd(c){let m=-1;return c.map(x=>(m=Math.max(m,x),(x/m-1)*100));}
+function corr(a,b){const ma=mean(a),mb=mean(b);let n=0,x=0,y=0;a.forEach((v,i)=>{n+=(v-ma)*(b[i]-mb);x+=(v-ma)**2;y+=(b[i]-mb)**2;});return n/Math.sqrt(x*y);}
+function stat(c,m){const r=rets(c),mr=rets(m),v=sd(r)*Math.sqrt(ANN),beta=corr(r,mr)*sd(r)/sd(mr),n=r.length,ar=Math.pow(c[c.length-1]/c[0],ANN/n)-1;
+ return{ret:c[c.length-1]/c[0]-1,ar,vol:v,sharpe:(mean(r)*ANN-RF)/v,mdd:Math.min(...dd(c))/100,beta};}
+const pc=x=>(x*100).toFixed(1)+"%",cl=x=>x>=0?"up":"dn";
+function mk(id,cfg){CH[id]=new Chart($("#"+id),cfg);}
+const base=(extra={})=>({maintainAspectRatio:false,animation:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{boxWidth:10}}},scales:{x:{ticks:{maxTicksLimit:7,maxRotation:0},grid:{display:false}}},...extra});
+function build(){
+ if(typeof Chart==="undefined"){$("#err").style.display="block";return;}
+ mk("price",{data:{labels:[],datasets:[{type:"line",label:"Close",data:[],yAxisID:"y",borderWidth:2,pointRadius:0},{type:"line",label:"SMA 20",data:[],yAxisID:"y",borderWidth:1.5,pointRadius:0},{type:"line",label:"SMA 50",data:[],yAxisID:"y",borderWidth:1.5,pointRadius:0},{type:"bar",label:"Volume (k)",data:[],yAxisID:"y1"}]},options:base({scales:{x:{ticks:{maxTicksLimit:7,maxRotation:0},grid:{display:false}},y:{},y1:{display:false,position:"right"}}})});
+ mk("rsi",{type:"line",data:{labels:[],datasets:[{label:"RSI",data:[],borderWidth:1.5,pointRadius:0},{label:"70",data:[],borderDash:[4,4],pointRadius:0,borderWidth:1},{label:"30",data:[],borderDash:[4,4],pointRadius:0,borderWidth:1}]},options:base({plugins:{legend:{display:false}},scales:{x:{display:false},y:{min:0,max:100}}})});
+ mk("dd",{type:"line",data:{labels:[],datasets:[{label:"Drawdown %",data:[],fill:true,pointRadius:0,borderWidth:1.5}]},options:base({plugins:{legend:{display:false}}})});
+ mk("cmp",{type:"line",data:{labels:[],datasets:[]},options:base()});
+ mk("rr",{type:"scatter",data:{datasets:[]},options:base({interaction:{mode:"nearest"},scales:{x:{title:{display:true,text:"Volatility %"}},y:{title:{display:true,text:"Annualised return %"}}}})});
+}
+function update(){
+ const k=$("#tk").value,n=Math.min(rangeN,T),s0=T-n,dates=D.dates.slice(s0),full=D.t[k].c,c=full.slice(s0),m=D.mkt.slice(s0),vol=D.t[k].v.slice(s0);
+ const st=stat(c,m),S=D.summary.find(x=>x.ticker===k),last=c[c.length-1],prev=c[c.length-2];
+ const rs=rsi(full).slice(s0),r=rs[rs.length-1];
+ $("#kpis").innerHTML=[["Last close",last.toFixed(2)+" ("+((last/prev-1)*100).toFixed(2)+"% 1d)"],["Return in range",pc(st.ret)],["Annualised volatility",pc(st.vol)],["Sharpe ratio",st.sharpe.toFixed(2)],["Max drawdown",pc(st.mdd)],["Beta vs index",st.beta.toFixed(2)],["RSI (14)",r?r.toFixed(0):"-"]]
+  .map(([l,v],i)=>`<div class="card kpi"><div class="v" style="color:${PAL[i]}">${v}</div><div class="l">${l}</div></div>`).join("");
+ const sig=r>70?"overbought (above 70)":r<30?"oversold (below 30)":"neutral (30-70)";
+ const s20=sma(full,20)[T-1],s50=sma(full,50)[T-1];
+ $("#ins").innerHTML=[`<b>${k}</b> (${D.t[k].s}) returned <b class="${cl(st.ret)}">${pc(st.ret)}</b> over this range with ${pc(st.vol)} annualised volatility.`,
+  `Trend: SMA20 is ${s20>s50?"above":"below"} SMA50, a ${s20>s50?"bullish":"bearish"} signal; RSI is ${sig}.`,
+  `Beta ${st.beta.toFixed(2)}: the stock has moved ${st.beta>1?"more":"less"} than the index on average.`,
+  `Full-period test: mean daily return ${S.mean_ret_p_value<.05?"is":"is not"} statistically different from zero (p = ${S.mean_ret_p_value.toFixed(3)}).`,
+  `SMA 20/50 strategy returned <b class="${cl(S.sma_strategy_return)}">${pc(S.sma_strategy_return)}</b> vs buy-and-hold ${pc(S.total_return)} over the full period.`].map(x=>`<li>${x}</li>`).join("");
+ document.querySelectorAll(".chip").forEach(e=>{const on=picked.includes(e.dataset.k);e.style.background=on?col(e.dataset.k)+"44":"transparent";e.style.borderColor=on?col(e.dataset.k):"";e.style.color=on?"#fff":"";});
+ // table + corr + scatter
+ const rows=D.tickers.map(t=>({t,s:stat(D.t[t].c.slice(s0),m),f:D.summary.find(x=>x.ticker===t)})).sort((a,b)=>b.s.sharpe-a.s.sharpe);
+ $("#sum").innerHTML='<tr><th>Ticker</th><th>Sector</th><th>Return</th><th>Ann. vol</th><th>Sharpe</th><th>Max DD</th><th>Beta</th><th>Skew (full)</th><th>p-value (full)</th><th>SMA strategy (full)</th></tr>'+
+  rows.map(({t,s,f})=>`<tr><td><b style="color:${col(t)}">${t}</b></td><td>${f.sector}</td><td class="${cl(s.ret)}">${pc(s.ret)}</td><td>${pc(s.vol)}</td><td>${s.sharpe.toFixed(2)}</td><td>${pc(s.mdd)}</td><td>${s.beta.toFixed(2)}</td><td>${f.skew.toFixed(2)}</td><td>${f.mean_ret_p_value.toFixed(3)}</td><td class="${cl(f.sma_strategy_return)}">${pc(f.sma_strategy_return)}</td></tr>`).join("");
+ const R={};D.tickers.forEach(t=>R[t]=rets(D.t[t].c.slice(s0)));
+ $("#hm").innerHTML="<tr><th></th>"+D.tickers.map(t=>`<th>${t}</th>`).join("")+"</tr>"+D.tickers.map(a=>`<tr><th>${a}</th>`+D.tickers.map(b=>{const v=corr(R[a],R[b]);const x=Math.max(-1,Math.min(1,v));return `<td style="background:${x>=0?`rgba(77,141,255,${.15+x*.7})`:`rgba(255,107,74,${.15-x*.7})`}">${v.toFixed(2)}</td>`;}).join("")+"</tr>").join("");
+ if(!CH.price)return;
+ Chart.defaults.color=css("--muted");Chart.defaults.borderColor=css("--line");
+ const P=CH.price;P.data.labels=dates;const cc=col(k);
+ P.data.datasets[0].data=c;P.data.datasets[0].borderColor=cc;
+ P.data.datasets[1].data=sma(full,20).slice(s0);P.data.datasets[1].borderColor="#e9c46a";P.data.datasets[1].hidden=!$("#s20").checked;
+ P.data.datasets[2].data=sma(full,50).slice(s0);P.data.datasets[2].borderColor="#ff9eb5";P.data.datasets[2].hidden=!$("#s50").checked;
+ P.data.datasets[3].data=vol;P.data.datasets[3].backgroundColor=cc+"55";P.options.scales.y1.max=Math.max(...vol)*4;P.update();
+ const Q=CH.rsi;Q.data.labels=dates;Q.data.datasets[0].data=rs;Q.data.datasets[0].borderColor=cc;Q.data.datasets[1].data=dates.map(()=>70);Q.data.datasets[1].borderColor="#ff6b4a";Q.data.datasets[2].data=dates.map(()=>30);Q.data.datasets[2].borderColor="#52d6a0";Q.update();
+ const W=CH.dd;W.data.labels=dates;W.data.datasets[0].data=dd(c);W.data.datasets[0].borderColor="#ff6b4a";W.data.datasets[0].backgroundColor="#ff6b4a33";W.update();
+ const C=CH.cmp;C.data.labels=dates;C.data.datasets=[...picked.map(t=>{const x=D.t[t].c.slice(s0);return{label:t,data:x.map(v=>+(v/x[0]*100).toFixed(1)),borderColor:col(t),borderWidth:2,pointRadius:0};}),{label:"Index",data:m.map(v=>+(v/m[0]*100).toFixed(1)),borderColor:"#aab",borderDash:[5,4],borderWidth:1.5,pointRadius:0}];C.update();
+ const X=CH.rr;X.data.datasets=rows.map(({t,s})=>({label:t,data:[{x:+(s.vol*100).toFixed(1),y:+(s.ar*100).toFixed(1)}],backgroundColor:col(t),pointRadius:t===k?10:6}));X.update();
+}
+$("#csv").onclick=()=>{const k=$("#tk").value,s0=T-Math.min(rangeN,T),f=D.t[k].c,a=sma(f,20),b=sma(f,50),r=rsi(f),o=["date,ticker,close,volume_k,sma20,sma50,rsi14"];
+ for(let i=s0;i<T;i++)o.push([D.dates[i],k,f[i],D.t[k].v[i],a[i]?.toFixed(2)??"",b[i]?.toFixed(2)??"",r[i]?.toFixed(1)??""].join(","));
+ const l=document.createElement("a");l.href=URL.createObjectURL(new Blob([o.join("\n")],{type:"text/csv"}));l.download=k+"_view.csv";l.click();};
+build();update();
+</script>
+</body>
+</html>
